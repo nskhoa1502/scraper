@@ -56,8 +56,6 @@ const scraper = (browser, url) =>
           description: htmlElement.querySelector("p").innerText,
         };
       });
-      //   console.log(headerData);
-      scrapedData.header = headerData;
 
       // =========== Scrape item ============
 
@@ -74,7 +72,7 @@ const scraper = (browser, url) =>
 
       //   console.log(detailLinks);
 
-      // Scrape detail data
+      // 2. Scrape detail data
       const scraperDetail = async (link) => {
         try {
           let pageDetail = await browser.newPage();
@@ -97,9 +95,9 @@ const scraper = (browser, url) =>
             "#left-col > article > div.post-images > div.images-swiper-container > div.swiper-wrapper > div.swiper-slide",
             (htmlElements) => {
               scrapedImages = htmlElements.map((htmlElement) => {
-                return htmlElement.querySelector("img").src;
+                return htmlElement.querySelector("img")?.src;
               });
-              return scrapedImages;
+              return scrapedImages.filter((i) => i !== false);
             }
           );
 
@@ -112,7 +110,7 @@ const scraper = (browser, url) =>
                 start: htmlElement
                   .querySelector("h1 > span")
                   // Only extract the number of className => 'star start-5' => 5
-                  .className.replace(/^\D+/g, ""),
+                  ?.className?.replace(/^\D+/g, ""),
                 class: {
                   content: htmlElement.querySelector("p").innerText,
                   classType:
@@ -137,26 +135,109 @@ const scraper = (browser, url) =>
             }
           );
 
-          console.log(scrapedHeader);
-          //   console.log(scrapedImages);
-          detailData.images = images;
+          // c. Scraping Detail content
+          const scrapedMainContentHeader = await pageDetail.$eval(
+            "#left-col > article.the-post > section.post-main-content",
+            (htmlElement) =>
+              htmlElement.querySelector("div.section-header>h2").innerText
+          );
+          const scrapedMainContentContent = await pageDetail.$$eval(
+            "#left-col > article > section.section.post-main-content > div.section-content > p",
+            (htmlElements) => htmlElements.map((element) => element.innerText)
+          );
 
+          // d. Scraping post features
+          const scrapedPostFeaturesHeader = await pageDetail.$eval(
+            "#left-col > article.the-post > section.post-overview",
+            (htmlElement) =>
+              htmlElement.querySelector("div.section-header>h3").innerText
+          );
+          const scrapedPostFeaturesContent = await pageDetail.$$eval(
+            "#left-col > article > section.section.post-overview > div.section-content > table.table > tbody > tr",
+            (htmlElements) =>
+              htmlElements.map((element) => ({
+                name: element.querySelector("td:first-child").innerText,
+                content: element.querySelector("td:last-child").innerText,
+              }))
+          );
+
+          // e. Contact info
+          let scrapedContactHeader = "";
+          let scrapedContactContent = [];
+
+          try {
+            scrapedContactHeader = await pageDetail.$eval(
+              "#left-col > article.the-post > section.post-contact",
+              (htmlElement) =>
+                htmlElement.querySelector("div.section-header>h3").innerText
+            );
+
+            scrapedContactContent = await pageDetail.$$eval(
+              "#left-col > article > section.section.post-contact > div.section-content > table.table > tbody > tr",
+              (htmlElements) =>
+                htmlElements.map((element) => ({
+                  name: element.querySelector("td:first-child").innerText,
+                  content: element.querySelector("td:last-child").innerText,
+                }))
+            );
+          } catch (err) {
+            console.log("Error in scraping contact info: " + err);
+          }
+
+          //   console.log(scrapedImages);
+          //   console.log(scrapedHeader);
+          //   console.log(scrapedMainContentHeader);
+          //   console.log(scrapedMainContentContent);
+          //   console.log(scrapedPostFeaturesHeader);
+          //   console.log(scrapedPostFeaturesContent);
+          //   console.log(scrapedContactHeader);
+          //   console.log(scrapedContactContent);
+          detailData.images = scrapedImages;
+          detailData.header = scrapedHeader;
+          detailData.mainContent = {
+            header: scrapedMainContentHeader,
+            content: scrapedMainContentContent,
+          };
+          detailData.overview = {
+            header: scrapedPostFeaturesHeader,
+            content: scrapedPostFeaturesContent,
+          };
+          detailData.contact = {
+            header: scrapedContactHeader ? scrapedContactHeader : "",
+            content: scrapedContactContent ? scrapedContactContent : [],
+          };
+
+          // console.log(detailData);
           // 4. Close page
           await pageDetail.close();
           console.log(">> Closed tab " + link);
+          return detailData;
         } catch (err) {
           console.log("Error in scraping data detail: " + err);
         }
       };
 
-      // Initializing the scraping process
+      // Initializing the scraping detail process
+
+      const details = [];
       for (let link of detailLinks) {
-        await scraperDetail(link);
+        const detail = await scraperDetail(link);
+        details.push(detail);
+        // console.log(detail);
+        // console.log(headerData);
       }
 
-      await browser.close();
+      // 3. Append all the scraping data into scrapedData
+
+      scrapedData.header = headerData;
+      scrapedData.body = details;
+      // console.log(headerData);
+      // console.log(details)
+      // console.log(scrapedData);
+
+      // await browser.close();
       console.log(">> Browser closed");
-      resolve();
+      resolve(scrapedData);
     } catch (err) {
       reject(err);
     }
