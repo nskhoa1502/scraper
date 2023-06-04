@@ -17,7 +17,7 @@ const scrapeMultiplePage = async (browserInstance) => {
   );
   const url = "https://phongtro123.com/";
   const indexes = [1, 2, 3, 4]; // Choose which category you will fetch.
-  const maxPages = 2; // Number of pages to scrape for each category
+  const maxPages = 5; // Number of pages to scrape for each category
 
   try {
     let browser = await browserInstance;
