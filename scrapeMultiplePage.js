@@ -2,7 +2,7 @@ const scrapers = require("./scraper");
 const fs = require("fs");
 
 function formatVietnameseText(text) {
-  // Remove diacritical marks
+  // Normalised the character
   const normalized = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
   // Convert to lowercase and replace spaces with hyphens
@@ -45,7 +45,7 @@ const scrapeMultiplePage = async (browserInstance) => {
           //   console.log(data);
           result.push(data);
           console.log(
-            `Finish scraping page ${page} of ${formatVietnameseText(
+            `Finish scraping page ${page} of ${maxPages} in ${formatVietnameseText(
               category.category
             )}`
           );

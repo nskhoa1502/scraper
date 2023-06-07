@@ -5,7 +5,7 @@ const startBrowser = async () => {
   try {
     // Start a browser instance
     browser = await puppeteer.launch({
-      headless: false, // True -> No broswer open | False -> Browser open
+      headless: true, // True -> No broswer open | False -> Browser open
 
       // By default, chrome will use multiple layers of sandbox to prevent risk contents
       // If you want to disable that protection then set it to disable
